@@ -5,6 +5,7 @@ from mnist_net import Discriminator, Generator
 from torchvision.utils import save_image
 import torch
 import yaml
+import os
 
 resume = False
 with open("config.yaml", "r") as f:
@@ -12,28 +13,20 @@ with open("config.yaml", "r") as f:
 
 
 def init_wandb():
-    wandb.init(project="GAN_MNIST", resume=resume)
-    wandb.config = config
-
-
-def upload_to_wandb():
-    data_artifact = wandb.Artifact(name='mnist', type='dataset',
-                                   description="Raw MNIST dataset, only trainset")
-    data_artifact.add_dir(config['data_path'])
-    wandb.log_artifact(data_artifact)
-
-    model_artifact = wandb.Artifact(name='GAN', type='model',
-                                    description="gan pytorch model")
-    model_artifact.add_dir(config["model_save_path"])
-    wandb.log_artifact(model_artifact)
+    wandb.init(project="GAN_MNIST", name="experiment_1", config=config, resume=resume)
 
 
 def main():
     if config["wandb"]:
         init_wandb()
-        train()
-    else:
-        train()
+
+    if not os.path.exists(config["data_path"]):
+        os.makedirs(config["data_path"])
+    if not os.path.exists(config["checkpoint_path"]):
+        os.makedirs(config["checkpoint_path"])
+    if not os.path.exists(config["model_save_path"]):
+        os.makedirs(config["model_save_path"])
+    train()
 
 
 def train():
@@ -132,7 +125,9 @@ def train():
     torch.save(G.state_dict(), config['model_save_path'] + f'/G-last.pth')
     torch.save(D.state_dict(), config['model_save_path'] + f'/D-last.pth')
     if config["wandb"]:
-        upload_to_wandb()
+        wandb.save(config['model_save_path'] + f'/G-latest.pth')
+        wandb.save(config['model_save_path'] + f'/D-latest.pth')
+        wandb.save('config.yaml')
 
 
 if __name__ == '__main__':
