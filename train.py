@@ -13,7 +13,7 @@ with open("config.yaml", "r") as f:
 
 
 def init_wandb():
-    wandb.init(project="GAN_MNIST", name="experiment_1", config=config, resume=resume)
+    wandb.init(project="GAN_MNIST", config=config, resume=resume)
 
 
 def main():
