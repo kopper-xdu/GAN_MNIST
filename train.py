@@ -26,6 +26,8 @@ def main():
         os.makedirs(config["checkpoint_path"])
     if not os.path.exists(config["model_save_path"]):
         os.makedirs(config["model_save_path"])
+    if not os.path.exists(config["image_save_path"]):
+        os.makedirs(config["image_save_path"])
     train()
 
 
