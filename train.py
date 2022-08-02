@@ -99,7 +99,7 @@ def train():
             g_optimizer.step()
 
             if (i + 1) % config['print_steps'] == 0:
-                print(f'Epoch [{epoch + 1}/ {100}], '
+                print(f'Epoch [{epoch + 1}/ {epochs}], '
                       f'd_loss: {d_loss.item()}, g_loss: {g_loss.item()}, '
                       f'd_real: {d_real.mean().item()}, d_fake: {d_fake.mean().item()}')
                 if config["wandb"]:
@@ -124,8 +124,8 @@ def train():
             }
             torch.save(save_dict, config['checkpoint_path'] + f'/checkpoint-epoch{epoch + 1}.pth')
 
-    torch.save(G.state_dict(), config['model_save_path'] + f'/G-last.pth')
-    torch.save(D.state_dict(), config['model_save_path'] + f'/D-last.pth')
+    torch.save(G.state_dict(), config['model_save_path'] + f'/G-latest.pth')
+    torch.save(D.state_dict(), config['model_save_path'] + f'/D-latest.pth')
     if config["wandb"]:
         wandb.save(config['model_save_path'] + f'/G-latest.pth')
         wandb.save(config['model_save_path'] + f'/D-latest.pth')

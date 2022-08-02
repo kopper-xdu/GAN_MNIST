@@ -1,6 +1,6 @@
 optimizer: Adam
 learning_rate: 0.0003
-epochs: 100
+epochs: 50
 batch_size: 128
 num_workers: 8
 z_dim: 100
