@@ -1,3 +1,5 @@
+import os
+
 import wandb
 from mnist_data import MNIST
 from torch.utils.data import DataLoader
@@ -5,21 +7,24 @@ from mnist_net import Discriminator, Generator
 from torchvision.utils import save_image
 import torch
 import yaml
-import os
 
-resume = False
 with open("config.yaml", "r") as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
 
+resume = config['resume']
+
+id = wandb.util.generate_id()
+if resume:
+    id = config["id"]
+
+f = open(f'./logs/log-{id}.txt', 'a')
+
 
 def init_wandb():
-    wandb.init(project="GAN_MNIST", config=config, resume=resume)
+    wandb.init(project="GAN_MNIST", config=config, id=id, resume="allow")
 
 
 def main():
-    if config["wandb"]:
-        init_wandb()
-
     if not os.path.exists(config["data_path"]):
         os.makedirs(config["data_path"])
     if not os.path.exists(config["checkpoint_path"]):
@@ -28,6 +33,10 @@ def main():
         os.makedirs(config["model_save_path"])
     if not os.path.exists(config["image_save_path"]):
         os.makedirs(config["image_save_path"])
+
+    if config["wandb"]:
+        init_wandb()
+
     train()
 
 
@@ -63,6 +72,7 @@ def train():
         d_optimizer.load_state_dict(checkpoint['d_optimizer'])
         g_optimizer.load_state_dict(checkpoint['g_optimizer'])
         start = checkpoint['epoch'] + 1
+        f.write(f'Resumed from epoch {start}\n')
         print(f"Resumed from epoch {start}")
 
     for epoch in range(start, epochs):
@@ -99,12 +109,15 @@ def train():
             g_optimizer.step()
 
             if (i + 1) % config['print_steps'] == 0:
-                print(f'Epoch [{epoch + 1}/ {epochs}], '
-                      f'd_loss: {d_loss.item()}, g_loss: {g_loss.item()}, '
-                      f'd_real: {d_real.mean().item()}, d_fake: {d_fake.mean().item()}')
+                s = f'Epoch [{epoch + 1}/ {epochs}], ' \
+                    f'd_loss: {d_loss.item()}, g_loss: {g_loss.item()}, ' \
+                    f'd_real: {d_real.mean().item()}, d_fake: {d_fake.mean().item()}'
+                print(s)
+                f.write(s+'\n')
                 if config["wandb"]:
                     wandb.log({'d_loss': d_loss.item(), 'g_loss': g_loss.item(),
-                               'd_real': d_real.mean().item(), 'd_fake': d_fake.mean().item()})
+                               'd_real': d_real.mean().item(), 'd_fake': d_fake.mean().item()},
+                              step=epoch * len(train_loader) + i + 1)
 
         if epoch + 1 == 1:
             save_image(real_img.detach().cpu(), config['save_img_path'] + '/real_images.png')
@@ -122,14 +135,21 @@ def train():
                 'g_optimizer': g_optimizer.state_dict(),
                 'epoch': epoch
             }
-            torch.save(save_dict, config['checkpoint_path'] + f'/checkpoint-epoch{epoch + 1}.pth')
+            torch.save(save_dict, config['checkpoint_path'] + f'/checkpoint-epoch{epoch + 1}-{id}.pth')
+            print('saved checkpoint!')
+            f.write('saved checkpoint!\n')
 
-    torch.save(G.state_dict(), config['model_save_path'] + f'/G-latest.pth')
-    torch.save(D.state_dict(), config['model_save_path'] + f'/D-latest.pth')
     if config["wandb"]:
-        wandb.save(config['model_save_path'] + f'/G-latest.pth')
-        wandb.save(config['model_save_path'] + f'/D-latest.pth')
+        torch.save(G.state_dict(), wandb.run.dir + '/' + f'/G-latest-{id}.pth')
+        torch.save(D.state_dict(), wandb.run.dir + '/' + f'/D-latest-{id}.pth')
+        wandb.save(wandb.run.dir + '/' + f'/G-latest-{id}.pth')
+        wandb.save(wandb.run.dir + '/' + f'/D-latest-{id}.pth')
         wandb.save('config.yaml')
+    else:
+        torch.save(G.state_dict(), config['model_save_path'] + f'/G-latest-{id}.pth')
+        torch.save(D.state_dict(), config['model_save_path'] + f'/D-latest-{id}.pth')
+    print('saved model!')
+    f.write('saved model!\n')
 
 
 if __name__ == '__main__':
